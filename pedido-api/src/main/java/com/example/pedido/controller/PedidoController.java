@@ -4,6 +4,7 @@ import com.example.pedido.client.CatalogoClient;
 import com.example.pedido.client.dto.ItemCatalogoResponse;
 import com.example.pedido.dto.PedidoRequest;
 import com.example.pedido.dto.PedidoResponse;
+import com.example.pedido.service.AtualizaPedidoRunnable;
 import com.example.pedido.service.PedidoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,35 +25,33 @@ public class PedidoController {
     @PostMapping
     public Mono<PedidoResponse> salvar(@RequestBody PedidoRequest pedidoRequest) {
         return Mono.defer(() -> {
-                    log.info("Chamando a gravação do pedido");
+                    log.info("Iniciando a gravação do pedido");
                     return service.salvar(pedidoRequest);
                 })
-                .subscribeOn(Schedulers.parallel())
-                .doOnSuccess(service::validaPedido);
+                .subscribeOn(Schedulers.parallel());
     }
 
     @GetMapping("/{id}")
     public Mono<PedidoResponse> buscarPorId(@PathVariable("id") String idPedido) {
         return Mono.defer(() -> {
-                    log.info("Buscando no BD o pedido Id - {}", idPedido);
+                    log.info("Iniciando busca no BD o pedido Id - {}", idPedido);
                     return service.buscarPorId(idPedido);
                 })
                 .subscribeOn(Schedulers.parallel());
     }
 
-
     @GetMapping
-    public Flux<ItemCatalogoResponse> listaCatalogo() {
+    public Flux<ItemCatalogoResponse> testeListaCatalogo() {
         return Flux.defer(() -> {
-            log.info("Buscando catalogo na api de Produtos");
+            log.info("Iniciando busca de Catalogo pela api de Pedidos");
             return catalogoClient.listarCatalogo();
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
     @GetMapping("/catalogo/{id}")
-    public Mono<ItemCatalogoResponse> buscarItemCatalogo(@PathVariable("id") String idProduto) {
+    public Mono<ItemCatalogoResponse> testeBuscarItemCatalogo(@PathVariable("id") String idProduto) {
         return Mono.defer(() -> {
-                    log.info("Buscando na api Catalogo o produto Id - {}", idProduto);
+                    log.info("Iniciando busca de produto no Catalogo pela api de Pedidos, produto id - {}", idProduto);
                     return catalogoClient.buscarItemCatalogo(idProduto);
                 })
                 .subscribeOn(Schedulers.boundedElastic());

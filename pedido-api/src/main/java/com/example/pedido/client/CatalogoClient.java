@@ -31,7 +31,6 @@ public class CatalogoClient {
                         return Flux.error(new RuntimeException("Erro na chamada"));
                     }
                 });
-
     }
 
     public Mono<ItemCatalogoResponse> buscarItemCatalogo(String idProduto) {
@@ -44,7 +43,7 @@ public class CatalogoClient {
                     } else {
                         return Mono.error(new RuntimeException("Erro na chamada"));
                     }
-                }).switchIfEmpty(Mono.error(new RuntimeException("Produto não existe no catálogo")));
+                });
     }
 
 }

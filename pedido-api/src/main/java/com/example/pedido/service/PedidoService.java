@@ -11,7 +11,6 @@ import com.example.pedido.repository.PedidoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -28,6 +27,7 @@ public class PedidoService {
     private final CatalogoClient catalogoClient;
 
     public Mono<PedidoResponse> salvar(PedidoRequest pedidoRequest) {
+        log.info("Gerando instancia do pedido");
         var pedido = Pedido.builder()
                 .idPedido(UUID.randomUUID().toString())
                 .itens(pedidoRequest.itens().stream()
@@ -37,15 +37,26 @@ public class PedidoService {
                 .status(Pedido.Status.REALIZADO)
                 .total(BigDecimal.ZERO)
                 .build();
-        repository.salvar(pedido);
-        return Mono.just(new PedidoResponse(pedido.getIdPedido(),
-                pedidoRequest.itens(),
-                pedido.getStatus()
-        ));
+        return Mono.defer(() -> {
+                    log.info("Chamada no DB para salvar o pedido criado");
+                    repository.salvar(pedido);
+                    new Thread(new AtualizaPedidoRunnable(repository, catalogoClient, pedido)).start();
+                    return Mono.just(new PedidoResponse(
+                            pedido.getIdPedido(),
+                            pedidoRequest.itens(),
+                            null,
+                            pedido.getStatus()));
+                })
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     public Mono<PedidoResponse> buscarPorId(String idPedido) {
-        return Mono.defer(() -> Mono.justOrEmpty(repository.buscarPorId(idPedido)))
+
+        return Mono.defer(() -> {
+                            log.info("Chamada no DB para buscar o pedido - {}", idPedido);
+                            return Mono.justOrEmpty(repository.buscarPorId(idPedido));
+                        }
+                )
                 .subscribeOn(Schedulers.boundedElastic())
                 .map(entidade ->
                         new PedidoResponse(
@@ -53,33 +64,7 @@ public class PedidoService {
                                 entidade.getItens().stream()
                                         .map(itemEntidade -> new ItemDTO(itemEntidade.getIdProduto(), itemEntidade.getQuantidade()))
                                         .toList(),
+                                entidade.getTotal(),
                                 entidade.getStatus()));
-    }
-
-    public Mono<Void> validaPedido(PedidoResponse pedidoResponse) {
-//        log.info("Validando pedido - {}", pedidoResponse);
-//        var itensPedido = pedidoResponse.itens();
-//        return itensPedido.stream()
-//                .map(
-//                        item -> {
-//                            final var idProduto = item.idProduto();
-//                            var itemCatalogo = catalogoClient.buscarItemCatalogo(idProduto).subscribe();
-//                            log.info("Verificando se tem saldo suficiente do produto - {}", itemCatalogo);
-//                            if (itemCatalogo.quantidade() < item.quantidade()) {
-//                                log.error("Quantidade insuficiente do produto - {}", itemCatalogo);
-//                                return new RuntimeException("Quantidade insuficiente do produto");
-//                            } else {
-//                                return itemCatalogo;
-//                            }
-//                                    .map(itemCatalogo -> {
-//                                        log.info("Calculando valor to item - {}", itemCatalogo);
-//
-//                                        return (itemCatalogo.produto().preco()
-//                                                .multiply(BigDecimal.valueOf(item.quantidade())));
-//                                    }).subscribe();
-//                        }
-//                )
-//                .sum();
-        return null;
     }
 }

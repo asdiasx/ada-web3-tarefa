@@ -5,14 +5,12 @@ import lombok.Data;
 import lombok.With;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
 @Builder
 @With
-//@Document(value = "pedidos")
 public class Pedido {
     private String idPedido;
     private List<Item> itens;
